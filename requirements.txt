@@ -8,3 +8,4 @@ MarkupSafe
 mysql-connector
 mysql-connector-python
 Werkzeug
+gunicorn
