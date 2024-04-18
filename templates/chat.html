@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cola Chat</title>
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+  </head>
+  <style>
+    body {
+      margin: 0; /* Remove margens padrão do corpo */
+      overflow-x: hidden; /* Oculta a barra de rolagem horizontal no corpo */
+    }
+
+    .container {
+      width: 100vw; /* Ocupa a largura total da tela */
+      height: 100vh; /* Ocupa a altura total da tela */
+      display: flex;
+    }
+
+    .leftSide, .rightSide {
+      flex: 1; /* Ocupa o espaço restante do container */
+      overflow-y: auto; /* Adicione a barra de rolagem vertical apenas quando necessário */
+      overflow-x: hidden; /* Oculta a barra de rolagem horizontal no container */
+    }
+    
+    .chatBox, .chatlist {
+      max-height: calc(100vh - 60px); /* Ajuste conforme necessário */
+      padding-right: 20px; /* Adiciona espaço para a barra de rolagem vertical */
+    }
+
+    .chatBox::-webkit-scrollbar, .chatlist::-webkit-scrollbar,.leftSide::-webkit-scrollbar
+     {
+      width: 0px; /* Remove a barra de rolagem no Chrome/Safari */
+      background: transparent; /* Garante que a área da barra de rolagem seja transparente */
+    }
+  </style>
+  <body>
+    <div class="container">
+      <div class="leftSide">
+        <!-- Cabeçalho -->
+        <div class="header">
+          <div class="userimg">
+            <img
+              src="{{ url_for('static', filename='perfil.png') }}"
+              alt="User"
+              class="cover"
+            />
+          </div>
+          <ul class="nav_icons">
+            <li><ion-icon name="scan-circle-outline"></ion-icon></li>
+            <li><ion-icon name="chatbox"></ion-icon></li>
+            <li><ion-icon name="ellipsis-vertical"></ion-icon></li>
+          </ul>
+        </div>
+        <!-- Busca -->
+        <div class="search_chat">
+          <div>
+            <input type="text" placeholder="Search" />
+            <ion-icon name="search-outline"></ion-icon>
+          </div>
+        </div>
+        <!-- Lista de chats -->
+        <div class="chatlist">
+          {% for contato in contatos %}
+          <!-- Adicione um evento de clique ao bloco do contato -->
+          <div
+            class="block active"
+            onclick="selecionarECarregarMensagens('{{ contato.nome }}')"
+          >
+            <div class="imgbx">
+              <img
+                src="{{ url_for('static', filename='perfil.png') }}"
+                class="cover"
+                alt=""
+              />
+            </div>
+            <div class="details">
+              <div class="listHead">
+                <h4>{{ contato.nome }}</h4>
+                <p class="time">10:50</p>
+              </div>
+              <div class="message_p">
+                <p>Teste Whatsapp</p>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="rightSide">
+        <div class="header">
+          <div class="imgText">
+            <div class="userimg">
+              <img
+                src="{{ url_for('static', filename='perfil.png') }}"
+                alt="User"
+                class="cover"
+              />
+            </div>
+            <h4 id="nomeDestinatario">User 01 <br /><span>Online</span></h4>
+          </div>
+          <ul class="nav_icons">
+            <li><ion-icon name="search-outline"></ion-icon></li>
+            <li><ion-icon name="ellipsis-vertical"></ion-icon></li>
+          </ul>
+        </div>
+
+        <div class="chatBox" id="chatBox">
+          {% for mensagem in mensagens %}
+          <div
+            class="message {% if mensagem.remetente == session.usuario.nome %}my_message{% else %}frnd_message{% endif %}"
+          >
+            <div>
+              <p>
+                {{ mensagem.mensagem }}
+                <br />
+                <span>Enviado por: {{ mensagem.remetente }}</span>
+                <span>Para: {{ mensagem.nome }}</span>
+              </p>
+            </div>
+          </div>
+          {% if loop.last %}
+          <!-- Adicione um ID único à última mensagem na lista de mensagens -->
+          <div id="lastMessage"></div>
+          {% endif %} {% endfor %}
+        </div>
+
+        <!-- ENVIAR -->
+        <form id="formEnviarMensagem" action="/enviar" method="post">
+          <div class="chatbox_input">
+            <input
+              type="text"
+              placeholder="Digite uma mensagem"
+              id="mensagemInput"
+              name="mensagem"
+              required
+            />
+            <select id="destinatarioSelect" name="destinatario" required>
+              <option value="">Selecione o destinatário</option>
+              {% for contato in contatos %}
+              <option value="{{ contato.nome }}">{{ contato.nome }}</option>
+              {% endfor %}
+            </select>
+            <button type="button" onclick="enviarMensagem()">
+              <ion-icon name="send"></ion-icon>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script type="text/javascript">
+      function enviarMensagem() {
+        var destinatario = $("#destinatarioSelect").val();
+        var mensagem = $("#mensagemInput").val();
+    
+        var dados = {
+          destinatario: destinatario,
+          mensagem: mensagem
+        };
+    
+        $.ajax({
+          url: "/enviarMensagem",
+          type: "POST",
+          contentType: "application/json",
+          data: JSON.stringify(dados),
+          success: function () {
+            atualizarMensagens();
+          },
+          error: function () {
+            alert("Erro ao enviar mensagem.");
+          }
+        });
+      }
+    
+      function atualizarMensagens() {
+        var nomeContatoAtual = $("#nomeDestinatario").text();
+        selecionarECarregarMensagens(nomeContatoAtual);
+      }
+    
+      function selecionarECarregarMensagens(nomeContato) {
+        $.ajax({
+          url: "/enviarMensagem?contato=" + nomeContato,
+          type: "GET",
+          success: function (data) {
+            $("#chatBox").html(data);
+          },
+          error: function () {
+            alert("Erro ao carregar mensagens.");
+          }
+        });
+      }
+    </script>
+    
+    
+  </body>
+</html>
